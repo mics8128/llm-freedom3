@@ -1,0 +1,87 @@
+name: Build vLLM CUDA 12.9 image
+
+on:
+  workflow_dispatch:
+    inputs:
+      push:
+        description: Push image to GHCR
+        type: boolean
+        default: true
+      tag:
+        description: Image tag suffix
+        type: string
+        default: "0.20.2-cu129"
+  push:
+    branches: [main]
+    paths:
+      - docker/vllm-cu129/**
+      - .github/workflows/build-vllm-cu129.yml
+
+permissions:
+  contents: read
+  packages: write
+
+concurrency:
+  group: build-vllm-cu129-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  IMAGE_NAME: ghcr.io/${{ github.repository_owner }}/vllm-cu129
+
+jobs:
+  build:
+    name: Build and optionally push
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v5
+
+      - name: Free disk space
+        shell: bash
+        run: |
+          set -euxo pipefail
+          df -h
+          sudo rm -rf /usr/share/dotnet /usr/local/lib/android /opt/ghc /opt/hostedtoolcache/CodeQL || true
+          docker system prune -af || true
+          df -h
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GHCR
+        if: github.event_name != 'pull_request' && (github.event_name == 'push' || inputs.push)
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Docker metadata
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ env.IMAGE_NAME }}
+          tags: |
+            type=raw,value=${{ inputs.tag || '0.20.2-cu129' }}
+            type=sha,prefix=sha-
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: docker/vllm-cu129
+          file: docker/vllm-cu129/Dockerfile
+          platforms: linux/amd64
+          push: ${{ github.event_name != 'pull_request' && (github.event_name == 'push' || inputs.push) }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          provenance: false
+          sbom: false
+
+      - name: Show disk usage
+        if: always()
+        shell: bash
+        run: |
+          df -h
+          docker system df || true
