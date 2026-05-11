@@ -5,10 +5,11 @@ Project rules for this repo. Follow these before changing the Vast.ai/vLLM templ
 ## Vast.ai template rules
 
 - Do **not** assume a recreated instance re-runs offer search filters. Recreate may keep the same host. For CUDA 12.9 images, rent a new offer with a compatible driver instead of recreating an old CUDA 12.6 host.
-- Vast search/template parameter units matter. Official `vastai search offers --help` says:
-  - `gpu_ram` is per-GPU RAM in **GB**, not MB. Use `gpu_ram>=45`, not `gpu_ram>=45000`.
-  - `driver_version` is a dotted driver version string such as `535.86.05`, not an integer encoding. Use `driver_version>=570.00.00`, not `driver_version>=570000000`.
-  - `cuda_vers` is the offer-search field for max supported CUDA version. Use `cuda_vers>=12.9` when filtering CUDA capability. Do not rely on instance-output-only names like `cuda_max_good` for offer search unless verified by current CLI docs.
+- Vast search/template **input syntax** units matter. Official `vastai search offers --help` says:
+  - `gpu_ram` is per-GPU RAM in **GB**, not MB. Input `gpu_ram>=45`, not `gpu_ram>=45000`.
+  - `driver_version` is a dotted driver version string such as `535.86.05`. Input `driver_version>=570.00.00`, not `driver_version>=570000000`.
+  - `cuda_vers` is the offer-search field for max supported CUDA version. Input `cuda_vers>=12.9` when filtering CUDA capability. Do not rely on instance-output-only names like `cuda_max_good` for offer search unless verified by current CLI docs.
+- Vast template/API output may show normalized internal values after creation/update, e.g. `gpu_ram>=45` can appear as `45000.0`, `driver_version>=570.00.00` can appear as `570000000`, and `cuda_vers` may appear as `cuda_max_good`. That display is not the CLI input format agents should write.
 - For `ghcr.io/mics8128/vllm-cu129:*`, require a host with NVIDIA driver new enough for CUDA 12.9. Use offer filters such as:
   - `driver_version>=570.00.00`
   - `cuda_vers>=12.9`
