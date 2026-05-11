@@ -21,7 +21,11 @@ RUN apt-get update \
         ca-certificates \
         curl \
         git \
+        g++ \
+        gcc \
+        libc6-dev \
         libgomp1 \
+        make \
         python3.12 \
         python3.12-dev \
         python3.12-venv \
@@ -30,7 +34,6 @@ RUN apt-get update \
     && pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir hf_transfer \
     && pip install --no-cache-dir "${VLLM_WHEEL_URL}" \
-    && apt-get purge -y --auto-remove python3.12-dev \
     && rm -rf /var/lib/apt/lists/* /root/.cache/pip
 
 WORKDIR /workspace
