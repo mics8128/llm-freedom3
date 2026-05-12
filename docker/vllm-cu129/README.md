@@ -179,6 +179,7 @@ HF_HOME=/data/hf
 | `REASONING_PARSER` | `--reasoning-parser`, e.g. `qwen3`. |
 | `ENABLE_AUTO_TOOL_CHOICE=true` | adds `--enable-auto-tool-choice`. |
 | `TOOL_CALL_PARSER` | `--tool-call-parser`, e.g. `qwen3_coder`. |
+| `VLLM_API_KEY` | `--api-key`. Set to a secret on private instances; templates should use a placeholder such as `please-change-me-for-security`. |
 | `LANGUAGE_MODEL_ONLY=true` | adds `--language-model-only` for text-only Qwen3.6 serving. |
 | `ENFORCE_EAGER=true` | adds `--enforce-eager`. Usually slower but can avoid compile issues. |
 | `SPECULATIVE_CONFIG` | `--speculative-config`. Pass JSON string or config path accepted by vLLM. |

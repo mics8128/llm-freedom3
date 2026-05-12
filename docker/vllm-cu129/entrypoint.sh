@@ -57,6 +57,7 @@ args=(
 [[ -n "${GPU_MEMORY_UTILIZATION:-}" ]] && args+=(--gpu-memory-utilization "${GPU_MEMORY_UTILIZATION}")
 [[ -n "${REASONING_PARSER:-}" ]] && args+=(--reasoning-parser "${REASONING_PARSER}")
 [[ -n "${TOOL_CALL_PARSER:-}" ]] && args+=(--tool-call-parser "${TOOL_CALL_PARSER}")
+[[ -n "${VLLM_API_KEY:-}" ]] && args+=(--api-key "${VLLM_API_KEY}")
 [[ -n "${SPECULATIVE_CONFIG:-}" ]] && args+=(--speculative-config "${SPECULATIVE_CONFIG}")
 [[ -n "${CHAT_TEMPLATE:-}" ]] && args+=(--chat-template "${CHAT_TEMPLATE}")
 [[ -n "${LIMIT_MM_PER_PROMPT:-}" ]] && args+=(--limit-mm-per-prompt "${LIMIT_MM_PER_PROMPT}")
