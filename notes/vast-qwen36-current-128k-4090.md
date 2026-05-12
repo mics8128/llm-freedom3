@@ -1,0 +1,233 @@
+# Vast.ai Huihui Qwen3.6 27B FP8 — RTX 4090 128K Working Setup
+
+Date: 2026-05-13
+
+## Status
+
+This is the current accepted working setup for serving `edp1096/Huihui-Qwen3.6-27B-abliterated-FP8` on a single Vast.ai RTX 4090 48GB instance.
+
+User assessment: current speed is good enough; keep this setup as reference.
+
+## Instance
+
+```text
+Instance ID: 36625605
+GPU: NVIDIA GeForce RTX 4090
+VRAM: 49140 MiB
+Compute capability: 8.9
+Driver: 580.65.06
+CUDA max: 13.0
+CPU: AMD Ryzen Threadripper PRO 5955WX 16-Cores
+System RAM: ~257386 MB
+Disk: 80 GB
+Image: ghcr.io/mics8128/vllm-cu129:0.20.2-cu129
+```
+
+## Endpoints
+
+```env
+API_URL=http://67.223.143.80:20068/v1
+API_KEY=vast
+MODEL=huihui-qwen3.6
+```
+
+SSH:
+
+```bash
+ssh -p 20016 root@67.223.143.80
+```
+
+Note: current vLLM server does not enforce the dummy `vast` API key.
+
+## Runtime configuration
+
+`/workspace/vllm.env`:
+
+```env
+MODEL=edp1096/Huihui-Qwen3.6-27B-abliterated-FP8
+SERVED_MODEL_NAME=huihui-qwen3.6
+HOST=0.0.0.0
+PORT=8000
+HF_HOME=/workspace/hf
+MAX_MODEL_LEN=131072
+MAX_NUM_SEQS=2
+GPU_MEMORY_UTILIZATION=0.90
+ENABLE_PREFIX_CACHING=true
+LANGUAGE_MODEL_ONLY=true
+REASONING_PARSER=qwen3
+ENABLE_AUTO_TOOL_CHOICE=true
+TOOL_CALL_PARSER=qwen3_coder
+SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":3}'
+EXTRA_ARGS="--kv-cache-dtype fp8 --calculate-kv-scales --attention-backend TRITON_ATTN"
+```
+
+Effective vLLM command:
+
+```bash
+vllm serve edp1096/Huihui-Qwen3.6-27B-abliterated-FP8 \
+  --host 0.0.0.0 \
+  --port 8000 \
+  --served-model-name huihui-qwen3.6 \
+  --max-model-len 131072 \
+  --max-num-seqs 2 \
+  --gpu-memory-utilization 0.90 \
+  --reasoning-parser qwen3 \
+  --tool-call-parser qwen3_coder \
+  --speculative-config '{"method":"mtp","num_speculative_tokens":3}' \
+  --enable-prefix-caching \
+  --enable-auto-tool-choice \
+  --language-model-only \
+  --kv-cache-dtype fp8 \
+  --calculate-kv-scales \
+  --attention-backend TRITON_ATTN
+```
+
+## Why this setup
+
+### 128K + seqs=2 requires FP8 KV cache
+
+Without KV cache compression, one RTX 4090 48GB cannot fit 128K context with `MAX_NUM_SEQS=2`.
+
+With FP8 KV cache, vLLM reported:
+
+```text
+Available KV cache memory: 11.75 GiB
+GPU KV cache size: 305,384 tokens
+Maximum concurrency for 131,072 tokens per request: 2.33x
+```
+
+So `128K / seqs=2` is viable.
+
+### Force TRITON attention backend
+
+Auto backend selected FlashInfer and crashed on first request because current runtime image lacks `nvcc`:
+
+```text
+/usr/local/cuda/bin/nvcc: not found
+```
+
+`FLASH_ATTN` is also not valid with this KV dtype:
+
+```text
+ValueError: Selected backend AttentionBackendEnum.FLASH_ATTN is not valid for this configuration. Reason: ['kv_cache_dtype not supported']
+```
+
+Therefore keep:
+
+```bash
+--attention-backend TRITON_ATTN
+```
+
+## Benchmark results
+
+Setup:
+
+```text
+MAX_MODEL_LEN=131072
+MAX_NUM_SEQS=2
+KV cache dtype=fp8
+Attention backend=TRITON_ATTN
+MTP speculative tokens=3
+```
+
+| prompt | max_tokens | concurrency | avg latency | aggregate output tok/s |
+|---|---:|---:|---:|---:|
+| small | 128 | 1 | 5.37s | 23.8 |
+| small | 128 | 2 | 5.37s | 47.6 |
+| small | 512 | 1 | 10.87s | 47.1 |
+| small | 512 | 2 | 12.20s | 78.0 |
+| medium | 128 | 1 | 3.03s | 42.3 |
+| medium | 128 | 2 | 3.43s | 74.6 |
+| medium | 512 | 1 | 10.33s | 49.6 |
+| medium | 512 | 2 | 10.32s | 99.2 |
+
+Observed during real pi/API use:
+
+```text
+GPU util: ~98%
+VRAM: ~42186 / 49140 MiB
+Running: usually 1 request
+Waiting: 0 requests
+GPU KV cache usage: ~17–22% on observed prompts
+Prefix cache hit rate: ~83–91%
+Generation throughput while active: ~15–50 tok/s
+Speculative decoding acceptance: varied ~37–99%, workload dependent
+```
+
+## Comparison: faster 32K setup
+
+Previous faster text-only setup:
+
+```env
+MAX_MODEL_LEN=32768
+MAX_NUM_SEQS=4
+GPU_MEMORY_UTILIZATION=0.90
+SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":3}'
+ENABLE_PREFIX_CACHING=true
+LANGUAGE_MODEL_ONLY=true
+```
+
+Observed benchmark:
+
+```text
+32K / seqs=4: ~155–188 aggregate output tok/s at concurrency 4
+128K / seqs=2 / fp8 KV: ~99 aggregate output tok/s at concurrency 2
+```
+
+Tradeoff: current 128K setup is ~35% slower in aggregate than the 32K sweet spot, but gives 4x context and real `seqs=2` capacity.
+
+## Pi integration
+
+`~/.pi/agent/models.json` points to:
+
+```json
+{
+  "baseUrl": "http://67.223.143.80:20068/v1",
+  "api": "openai-completions",
+  "apiKey": "vast",
+  "models": [
+    {
+      "id": "huihui-qwen3.6",
+      "name": "Vast Huihui Qwen3.6 27B FP8 vLLM 4090 128K",
+      "contextWindow": 131072,
+      "input": ["text"]
+    }
+  ]
+}
+```
+
+The instance is text-only because `LANGUAGE_MODEL_ONLY=true`.
+
+## Known caveats
+
+- FP8 KV cache logs warnings about uncalibrated scales:
+
+```text
+Using KV cache scaling factor 1.0 for fp8_e4m3
+Using uncalibrated q_scale 1.0 and/or prob_scale 1.0 with fp8 attention
+```
+
+- This may have accuracy risk. Short tests and pi usage were stable.
+- MTP=3 sometimes has lower acceptance on some prompts, but overall current speed is acceptable.
+- If user perceives hanging, check log first. It may simply be running a long request at 15–50 tok/s, not crashed.
+
+## Health check commands
+
+```bash
+curl http://67.223.143.80:20068/v1/models
+ssh -p 20016 root@67.223.143.80 'pgrep -af "vllm serve|EngineCore|python"; nvidia-smi; tail -n 120 /workspace/vllm.log'
+```
+
+Search recent errors:
+
+```bash
+ssh -p 20016 root@67.223.143.80 \
+  'grep -n -E "ERROR|Traceback|RuntimeError|ValueError|Exception|OOM|out of memory|Ninja|nvcc|HTTP/1.1\\\" 500" /workspace/vllm.log | tail -120'
+```
+
+Check throughput metrics:
+
+```bash
+ssh -p 20016 root@67.223.143.80 \
+  'grep -E "Avg prompt throughput|Avg generation throughput|Running:|Waiting:|KV cache usage|Prefix cache" /workspace/vllm.log | tail -30'
+```
