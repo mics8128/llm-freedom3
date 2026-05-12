@@ -1,0 +1,32 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENV_FILE="${VLLM_ENV_FILE:-/workspace/vllm.env}"
+mkdir -p "$(dirname "${ENV_FILE}")"
+touch "${ENV_FILE}"
+chmod 600 "${ENV_FILE}" || true
+
+if [[ "$#" -eq 0 ]]; then
+  echo "Usage: vllm-set-param KEY=VALUE [KEY=VALUE ...]" >&2
+  echo "Current ${ENV_FILE}:" >&2
+  cat "${ENV_FILE}" >&2
+  exit 64
+fi
+
+for kv in "$@"; do
+  if [[ "${kv}" != *=* ]]; then
+    echo "Invalid argument: ${kv}; expected KEY=VALUE" >&2
+    exit 64
+  fi
+  key="${kv%%=*}"
+  value="${kv#*=}"
+  if [[ ! "${key}" =~ ^[A-Za-z_][A-Za-z0-9_]*$ ]]; then
+    echo "Invalid env key: ${key}" >&2
+    exit 64
+  fi
+  tmp="${ENV_FILE}.tmp"
+  grep -v -E "^${key}=" "${ENV_FILE}" > "${tmp}" || true
+  printf '%s=%q\n' "${key}" "${value}" >> "${tmp}"
+  mv "${tmp}" "${ENV_FILE}"
+  echo "Set ${key} in ${ENV_FILE}"
+done

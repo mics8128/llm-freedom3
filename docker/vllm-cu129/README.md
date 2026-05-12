@@ -6,6 +6,7 @@ OpenAI-compatible vLLM server image for Vast.ai templates.
 
 - `Dockerfile` — CUDA 12.9.1 cuDNN runtime, Ubuntu 24.04, Python 3.12, vLLM `0.20.2+cu129` GitHub release wheel.
 - `entrypoint.sh` — starts `vllm serve` OpenAI-compatible server with env-driven options.
+- `vllm-restart`, `vllm-status`, `vllm-set-param`, `vllm-wait-ready` — helper commands for SSH-mode Vast.ai debugging and short-downtime parameter changes.
 
 ## Build
 
@@ -48,6 +49,37 @@ curl http://localhost:8000/v1/chat/completions \
   -H 'Content-Type: application/json' \
   -d '{"model":"Qwen/Qwen3.6-27B-FP8","messages":[{"role":"user","content":"Say hi"}],"max_tokens":32}'
 ```
+
+## Debug helpers
+
+These helpers are most useful on Vast.ai SSH templates, where vLLM runs as a background process and the container remains alive after vLLM exits.
+
+Inspect status:
+
+```bash
+vllm-status
+```
+
+Persist parameter overrides to `/workspace/vllm.env`:
+
+```bash
+vllm-set-param MAX_NUM_SEQS=2 GPU_MEMORY_UTILIZATION=0.92
+```
+
+Restart vLLM on the same port, loading `/workspace/vllm.env` first:
+
+```bash
+vllm-restart
+vllm-wait-ready 300
+```
+
+Use a different env/log path if needed:
+
+```bash
+VLLM_ENV_FILE=/workspace/video.env VLLM_LOG_FILE=/workspace/vllm-video.log vllm-restart
+```
+
+In normal Docker entrypoint mode, killing vLLM exits the container. Use these helpers with SSH/Jupyter mode, a supervisor, or an external restart policy.
 
 ## Vast.ai template guidance
 

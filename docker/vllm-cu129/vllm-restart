@@ -1,0 +1,43 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+ENV_FILE="${VLLM_ENV_FILE:-/workspace/vllm.env}"
+LOG_FILE="${VLLM_LOG_FILE:-/workspace/vllm.log}"
+PID_FILE="${VLLM_PID_FILE:-/workspace/vllm.pid}"
+ENTRYPOINT="${VLLM_ENTRYPOINT:-/usr/local/bin/vllm-entrypoint}"
+STOP_TIMEOUT="${VLLM_STOP_TIMEOUT:-30}"
+
+if [[ -f "${ENV_FILE}" ]]; then
+  set -a
+  # shellcheck disable=SC1090
+  source "${ENV_FILE}"
+  set +a
+fi
+
+mapfile -t pids < <(pgrep -f "[v]llm serve" || true)
+if [[ "${#pids[@]}" -gt 0 ]]; then
+  echo "Stopping vLLM: ${pids[*]}"
+  kill "${pids[@]}" 2>/dev/null || true
+  for _ in $(seq 1 "${STOP_TIMEOUT}"); do
+    if ! pgrep -f "[v]llm serve" >/dev/null; then
+      break
+    fi
+    sleep 1
+  done
+  if pgrep -f "[v]llm serve" >/dev/null; then
+    echo "Force killing vLLM"
+    pkill -9 -f "[v]llm serve" || true
+  fi
+fi
+
+# EngineCore can occasionally outlive the API process after failed startups.
+if pgrep -f "[V]LLM::EngineCore" >/dev/null; then
+  echo "Cleaning stale EngineCore processes"
+  pkill -9 -f "[V]LLM::EngineCore" || true
+fi
+
+mkdir -p "$(dirname "${LOG_FILE}")"
+echo "Starting vLLM; log=${LOG_FILE}"
+nohup "${ENTRYPOINT}" > "${LOG_FILE}" 2>&1 &
+echo "$!" > "${PID_FILE}"
+echo "Started pid=$(cat "${PID_FILE}")"

@@ -1,0 +1,39 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PORT="${PORT:-8000}"
+LOG_FILE="${VLLM_LOG_FILE:-/workspace/vllm.log}"
+PID_FILE="${VLLM_PID_FILE:-/workspace/vllm.pid}"
+
+echo "== time =="
+date -u
+
+echo "== processes =="
+if [[ -f "${PID_FILE}" ]]; then
+  pid="$(cat "${PID_FILE}" 2>/dev/null || true)"
+  [[ -n "${pid}" ]] && ps -p "${pid}" -o pid,ppid,etime,stat,%cpu,%mem,rss,cmd 2>/dev/null || true
+fi
+pgrep -af "[v]llm serve|[V]LLM::EngineCore" || true
+
+echo "== gpu =="
+if command -v nvidia-smi >/dev/null 2>&1; then
+  nvidia-smi --query-gpu=name,memory.used,memory.total,utilization.gpu,driver_version,compute_cap --format=csv,noheader || true
+else
+  echo "nvidia-smi not found"
+fi
+
+echo "== api =="
+if command -v curl >/dev/null 2>&1; then
+  curl -sS --max-time 3 "http://127.0.0.1:${PORT}/v1/models" | head -c 1000 || true
+  echo
+else
+  echo "curl not found"
+fi
+
+echo "== log tail =="
+if [[ -f "${LOG_FILE}" ]]; then
+  stat -c '%y %s' "${LOG_FILE}" 2>/dev/null || stat -f '%Sm %z' "${LOG_FILE}" 2>/dev/null || true
+  tail -80 "${LOG_FILE}" || true
+else
+  echo "No log: ${LOG_FILE}"
+fi

@@ -38,7 +38,12 @@ RUN apt-get update \
 
 WORKDIR /workspace
 COPY entrypoint.sh /usr/local/bin/vllm-entrypoint
+COPY vllm-restart vllm-status vllm-set-param vllm-wait-ready /usr/local/bin/
 RUN chmod +x /usr/local/bin/vllm-entrypoint \
+    /usr/local/bin/vllm-restart \
+    /usr/local/bin/vllm-status \
+    /usr/local/bin/vllm-set-param \
+    /usr/local/bin/vllm-wait-ready \
     && mkdir -p /workspace/hf
 
 EXPOSE 8000

@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+PORT="${PORT:-8000}"
+TIMEOUT="${1:-${VLLM_READY_TIMEOUT:-300}}"
+START="$(date +%s)"
+URL="http://127.0.0.1:${PORT}/v1/models"
+
+echo "Waiting for ${URL} up to ${TIMEOUT}s"
+while true; do
+  if curl -fsS --max-time 3 "${URL}" >/tmp/vllm-ready-response.json 2>/tmp/vllm-ready-error.log; then
+    echo "ready after $(($(date +%s)-START))s"
+    cat /tmp/vllm-ready-response.json
+    echo
+    exit 0
+  fi
+  now="$(date +%s)"
+  if (( now - START >= TIMEOUT )); then
+    echo "timeout after ${TIMEOUT}s" >&2
+    cat /tmp/vllm-ready-error.log >&2 || true
+    exit 1
+  fi
+  sleep 5
+done
