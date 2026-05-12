@@ -14,7 +14,12 @@ ENV PYTHONUNBUFFERED=1 \
     VLLM_USE_V1=1 \
     MODEL=Qwen/Qwen3.6-27B-FP8 \
     HOST=0.0.0.0 \
-    PORT=8000
+    PORT=8000 \
+    MAX_MODEL_LEN=131072 \
+    MAX_NUM_SEQS=2 \
+    GPU_MEMORY_UTILIZATION=0.90 \
+    AUTO_TENSOR_PARALLEL=true \
+    SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":3}'
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends \

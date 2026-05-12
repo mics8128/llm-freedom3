@@ -29,6 +29,16 @@ fi
 
 mkdir -p "${HF_HOME}"
 
+# vLLM defaults tensor parallelism to 1. For Vast.ai multi-GPU rentals,
+# auto-use all visible GPUs unless TENSOR_PARALLEL_SIZE is explicitly set.
+AUTO_TENSOR_PARALLEL="${AUTO_TENSOR_PARALLEL:-true}"
+if [[ -z "${TENSOR_PARALLEL_SIZE:-}" ]] && bool_on "${AUTO_TENSOR_PARALLEL}" && command -v nvidia-smi >/dev/null 2>&1; then
+  gpu_count="$(nvidia-smi --query-gpu=index --format=csv,noheader 2>/dev/null | wc -l | tr -d ' ')"
+  if [[ "${gpu_count}" =~ ^[0-9]+$ && "${gpu_count}" -gt 1 ]]; then
+    export TENSOR_PARALLEL_SIZE="${gpu_count}"
+  fi
+fi
+
 args=(
   "${MODEL}"
   --host "${HOST}"
@@ -49,6 +59,9 @@ args=(
 [[ -n "${TOOL_CALL_PARSER:-}" ]] && args+=(--tool-call-parser "${TOOL_CALL_PARSER}")
 [[ -n "${SPECULATIVE_CONFIG:-}" ]] && args+=(--speculative-config "${SPECULATIVE_CONFIG}")
 [[ -n "${CHAT_TEMPLATE:-}" ]] && args+=(--chat-template "${CHAT_TEMPLATE}")
+[[ -n "${LIMIT_MM_PER_PROMPT:-}" ]] && args+=(--limit-mm-per-prompt "${LIMIT_MM_PER_PROMPT}")
+[[ -n "${MM_PROCESSOR_KWARGS:-}" ]] && args+=(--mm-processor-kwargs "${MM_PROCESSOR_KWARGS}")
+[[ -n "${ALLOWED_LOCAL_MEDIA_PATH:-}" ]] && args+=(--allowed-local-media-path "${ALLOWED_LOCAL_MEDIA_PATH}")
 
 if bool_on "${TRUST_REMOTE_CODE:-}"; then
   args+=(--trust-remote-code)
@@ -71,10 +84,6 @@ fi
 if bool_on "${ENFORCE_EAGER:-}"; then
   args+=(--enforce-eager)
 fi
-if bool_on "${DISABLE_LOG_REQUESTS:-}"; then
-  args+=(--disable-log-requests)
-fi
-
 if [[ -n "${EXTRA_ARGS:-}" ]]; then
   # shellcheck disable=SC2206
   extra=( ${EXTRA_ARGS} )
