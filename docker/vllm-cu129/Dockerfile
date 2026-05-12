@@ -11,6 +11,9 @@ ENV PYTHONUNBUFFERED=1 \
     PATH=/opt/venv/bin:/usr/local/cuda/bin:/usr/local/nvidia/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin \
     HF_HOME=/workspace/hf \
     HF_HUB_ENABLE_HF_TRANSFER=1 \
+    XDG_CACHE_HOME=/workspace/.cache \
+    VLLM_CACHE_ROOT=/workspace/.cache/vllm \
+    TORCHINDUCTOR_CACHE_DIR=/workspace/.cache/vllm/torch_compile_cache \
     VLLM_USE_V1=1 \
     MODEL=Qwen/Qwen3.6-27B-FP8 \
     HOST=0.0.0.0 \
@@ -52,7 +55,7 @@ RUN chmod +x /usr/local/bin/vllm-entrypoint \
     /usr/local/bin/vllm-status \
     /usr/local/bin/vllm-set-param \
     /usr/local/bin/vllm-wait-ready \
-    && mkdir -p /workspace/hf
+    && mkdir -p /workspace/hf /workspace/.cache/vllm/torch_compile_cache
 
 EXPOSE 8000
 ENTRYPOINT ["tini", "--", "/usr/local/bin/vllm-entrypoint"]

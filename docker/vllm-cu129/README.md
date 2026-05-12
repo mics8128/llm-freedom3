@@ -164,6 +164,9 @@ HF_HOME=/data/hf
 | `SERVED_MODEL_NAME` | `--served-model-name`. |
 | `DOWNLOAD_DIR` | `--download-dir`. Usually leave empty and use `HF_HOME`. |
 | `HF_HOME` | Hugging Face cache. Use `/data/hf` with Vast.ai mounted volume, else `/workspace/hf`. |
+| `XDG_CACHE_HOME` | Runtime cache root for libraries such as FlashInfer. Defaults to `/workspace/.cache` so JIT/autotune caches can survive vLLM restarts on the same Vast.ai instance. |
+| `VLLM_CACHE_ROOT` | vLLM cache root. Defaults to `/workspace/.cache/vllm`. |
+| `TORCHINDUCTOR_CACHE_DIR` | TorchInductor compile cache. Defaults to `/workspace/.cache/vllm/torch_compile_cache`. |
 | `HF_TOKEN` / `HG_TOKEN` / `HUGGING_FACE_HUB_TOKEN` | Hugging Face auth token. `HG_TOKEN` and `HUGGING_FACE_HUB_TOKEN` are copied to `HF_TOKEN` if `HF_TOKEN` is unset. |
 | `DTYPE` | `--dtype`, e.g. `auto`, `bfloat16`, `float16`. |
 | `QUANTIZATION` | `--quantization`, if needed. FP8 model repos often auto-detect. |

@@ -17,7 +17,10 @@ fi
 HOST="${HOST:-0.0.0.0}"
 PORT="${PORT:-8000}"
 HF_HOME="${HF_HOME:-/workspace/hf}"
-export HF_HOME
+VLLM_CACHE_ROOT="${VLLM_CACHE_ROOT:-/workspace/.cache/vllm}"
+XDG_CACHE_HOME="${XDG_CACHE_HOME:-/workspace/.cache}"
+TORCHINDUCTOR_CACHE_DIR="${TORCHINDUCTOR_CACHE_DIR:-${VLLM_CACHE_ROOT}/torch_compile_cache}"
+export HF_HOME VLLM_CACHE_ROOT XDG_CACHE_HOME TORCHINDUCTOR_CACHE_DIR
 
 # Accept common token aliases. Hugging Face tooling reads HF_TOKEN.
 if [[ -z "${HF_TOKEN:-}" && -n "${HG_TOKEN:-}" ]]; then
@@ -27,7 +30,7 @@ if [[ -z "${HF_TOKEN:-}" && -n "${HUGGING_FACE_HUB_TOKEN:-}" ]]; then
   export HF_TOKEN="${HUGGING_FACE_HUB_TOKEN}"
 fi
 
-mkdir -p "${HF_HOME}"
+mkdir -p "${HF_HOME}" "${VLLM_CACHE_ROOT}" "${XDG_CACHE_HOME}" "${TORCHINDUCTOR_CACHE_DIR}"
 
 # vLLM defaults tensor parallelism to 1. For Vast.ai multi-GPU rentals,
 # auto-use all visible GPUs unless TENSOR_PARALLEL_SIZE is explicitly set.
