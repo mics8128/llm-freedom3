@@ -31,6 +31,8 @@ RUN apt-get update \
         libc6-dev \
         libgomp1 \
         make \
+        cuda-nvcc-12-9 \
+        libcurand-dev-12-9 \
         python3.12 \
         python3.12-dev \
         python3.12-venv \
@@ -38,6 +40,7 @@ RUN apt-get update \
     && python3.12 -m venv /opt/venv \
     && pip install --no-cache-dir --upgrade pip setuptools wheel \
     && pip install --no-cache-dir hf_transfer \
+    && pip install --no-cache-dir nvidia-modelopt==0.43.0 \
     && pip install --no-cache-dir "${VLLM_WHEEL_URL}" \
     && rm -rf /var/lib/apt/lists/* /root/.cache/pip
 
