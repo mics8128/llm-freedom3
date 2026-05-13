@@ -238,8 +238,11 @@ Template currently records the 192K baseline env:
 
 ```text
 id: 414996
-hash: db58ce8606c84a21b1a7e5cb2201e5bf
+hash: 816fdf4c96ecb57fa7598c042ee58c6c
+previous hash: db58ce8606c84a21b1a7e5cb2201e5bf
 name: AEON Qwen3.6 27B Ultimate NVFP4 MTP Vision cu129 192K
+image: ghcr.io/mics8128/vllm-cu129:0.20.2-cu129
+image digest after FlashInfer cache build: sha256:0b05d74cea02af450d457c6ab5c6f00931e9883eca5068580e7c6b597e596ab7
 recommended_disk_space: 40 GB
 ```
 
@@ -294,7 +297,8 @@ API: http://24.205.222.196:42525/v1
 SSH: root@24.205.222.196 -p 42645
 API key: please-change-me-for-security
 Served model: aeon-qwen3.6-nvfp4-mtp
-Template hash: db58ce8606c84a21b1a7e5cb2201e5bf
+Template hash at instance creation: db58ce8606c84a21b1a7e5cb2201e5bf
+Current template hash after no-extra-install onstart update: 816fdf4c96ecb57fa7598c042ee58c6c
 Network: inet_down 1503.3 Mbps, inet_up 437.6 Mbps
 Disk: 80 GB instance disk
 ```
