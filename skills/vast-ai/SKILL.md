@@ -116,7 +116,13 @@ Docker options accepted by GUI/CLI are limited to:
 - hostname: `-h name`
 - ports: `-p 8081:8081`, `-p 8082:8082/udp`
 
-Other docker run options are ignored per Template Settings docs.
+Other docker run options are ignored per Template Settings docs. `OPEN_BUTTON_PORT` is only a GUI convenience; it does not prove the API is reachable.
+
+Template env/onstart quoting traps:
+
+- JSON env values such as `LIMIT_MM_PER_PROMPT`, `SPECULATIVE_CONFIG`, and `EXTRA_ARGS` need careful shell quoting.
+- After create/update, verify actual runtime args in instance logs/process list; do not trust the intended env string alone.
+- Keep `onstart` short enough for Vast's field limit; fetch a remote script or use image helpers for long setup.
 
 ### Create template
 
@@ -139,7 +145,7 @@ vastai create template \
   --ssh --direct
 ```
 
-`--disk_space` is GB. `--public` exposes template to public; never use with secrets in env/login/onstart/readme.
+`--disk_space` is GB and is the template's recommended disk size, not proof of actual instance disk. `create instance --disk <GB>` controls container disk at rent time. `--public` exposes template to public; never use with secrets in env/login/onstart/readme.
 
 ### Update template
 
@@ -155,6 +161,15 @@ vastai update template <HASH_ID> \
 ```
 
 Local CLI help example has typo `--disk 8.0` under update-template; actual option is `--disk_space` per help options. Verify with `vastai update template --help` before use.
+
+Update pitfalls learned in this project:
+
+- First read the current template with `vastai search templates ... --raw`; preserve existing `name`, `image`, `env`, `onstart`, `repo/href`, visibility/readme, disk, and filters unless intentionally changing them.
+- Do not update only `--search_params` or only `--disk_space`; partial updates have cleared unspecified fields to `null` in testing.
+- Vast can return a new `hash_id` after update. Record/use the new hash for future instance creation.
+- Template update affects future instances created from the new hash. Existing instances do not automatically inherit it; use `vastai update instance ... --template_hash_id <HASH>` or recreate when needed.
+- Raw/API output may normalize filters (`gpu_ram` MB, integer `driver_version`, `cuda_max_good`). Do not copy those normalized values back as CLI query input.
+- For new model, vision, multi-GPU, or risky tuning changes, prefer creating a new template instead of overwriting a known-good one.
 
 Search/list templates:
 
@@ -247,7 +262,7 @@ sftp -P <SSH_PORT> root@<HOST>
 
 ## Ports and public endpoints
 
-Vast Docker instances usually share IPs; internal ports map to random external ports.
+Vast Docker instances usually share IPs; internal ports map to random external ports. Do not assume public port equals internal port such as `8000`.
 
 Open ports with Docker options/env:
 
@@ -260,7 +275,7 @@ Default internal ports:
 - SSH mode: internal 22
 - Jupyter mode: internal 8080 plus 22
 
-Limit: 64 total open ports per instance.
+Limit: 64 total open ports per instance. If `direct_port_count`/offer ports are insufficient, SSH/custom public ports may not behave as expected.
 
 Find mapped public ports:
 
@@ -300,7 +315,7 @@ API docs: logs endpoint uploads logs to S3 and returns generated URL under hood;
 
 ### Container storage
 
-- Set with `--disk <GB>` when creating instance.
+- Set with `--disk <GB>` when creating instance; template `--disk_space` is only recommendation/default metadata.
 - Fixed at creation; cannot resize.
 - Persists through stop/start.
 - Destroying instance permanently deletes it.
