@@ -279,3 +279,37 @@ Check throughput metrics:
 ssh -p 20016 root@67.223.143.80 \
   'grep -E "Avg prompt throughput|Avg generation throughput|Running:|Waiting:|KV cache usage|Prefix cache" /workspace/vllm.log | tail -30'
 ```
+
+## Template maintenance — 2026-05-13
+
+Huihui 128K Vision template updated to use the rebuilt `ghcr.io/mics8128/vllm-cu129:0.20.2-cu129` image that includes CUDA compile deps, `nvidia-modelopt`, runtime cache defaults, FlashInfer cache persistence, and entrypoint-managed `/workspace/vllm.env` persistence.
+
+Template:
+
+```text
+id: 414917
+previous hash: 999d731aa780f56057887b55dbfa7c4f
+current hash: f0f25b1c9ac40e7d7c46d539d4ec1cf2
+image: ghcr.io/mics8128/vllm-cu129:0.20.2-cu129
+image digest: sha256:5657a4385c3ab6804923bc44797f7ed2b42a0170f8f91d809dc857d9bfc6d5ea
+```
+
+Only `onstart` was simplified; verified unchanged fields include name, image/tag, env, disk, SSH/direct settings, readme visibility, description, and search filters.
+
+Simplified onstart:
+
+```bash
+nohup /usr/local/bin/vllm-entrypoint > /workspace/vllm.log 2>&1 &
+```
+
+The 4090 runtime env remains the 128K vision baseline:
+
+```env
+MAX_MODEL_LEN=131072
+MAX_NUM_SEQS=2
+GPU_MEMORY_UTILIZATION=0.90
+LANGUAGE_MODEL_ONLY=false
+LIMIT_MM_PER_PROMPT='{"image":4,"video":0}'
+SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":3}'
+EXTRA_ARGS='--kv-cache-dtype fp8 --calculate-kv-scales --attention-backend TRITON_ATTN'
+```
