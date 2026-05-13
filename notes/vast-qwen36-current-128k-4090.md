@@ -53,7 +53,8 @@ MAX_MODEL_LEN=131072
 MAX_NUM_SEQS=2
 GPU_MEMORY_UTILIZATION=0.90
 ENABLE_PREFIX_CACHING=true
-LANGUAGE_MODEL_ONLY=true
+LANGUAGE_MODEL_ONLY=false
+LIMIT_MM_PER_PROMPT='{"image":4,"video":0}'
 REASONING_PARSER=qwen3
 ENABLE_AUTO_TOOL_CHOICE=true
 TOOL_CALL_PARSER=qwen3_coder
@@ -76,7 +77,7 @@ vllm serve edp1096/Huihui-Qwen3.6-27B-abliterated-FP8 \
   --speculative-config '{"method":"mtp","num_speculative_tokens":3}' \
   --enable-prefix-caching \
   --enable-auto-tool-choice \
-  --language-model-only \
+  --limit-mm-per-prompt '{"image":4,"video":0}' \
   --kv-cache-dtype fp8 \
   --calculate-kv-scales \
   --attention-backend TRITON_ATTN
@@ -196,7 +197,54 @@ Tradeoff: current 128K setup is ~35% slower in aggregate than the 32K sweet spot
 }
 ```
 
-The instance is text-only because `LANGUAGE_MODEL_ONLY=true`.
+The instance currently accepts text and image input because `LANGUAGE_MODEL_ONLY=false` and `LIMIT_MM_PER_PROMPT={"image":4,"video":0}`.
+
+## Current vision-enabled retest — 2026-05-13
+
+Current runtime checked before retest:
+
+```env
+MAX_MODEL_LEN=131072
+MAX_NUM_SEQS=2
+GPU_MEMORY_UTILIZATION=0.90
+LANGUAGE_MODEL_ONLY=false
+LIMIT_MM_PER_PROMPT='{"image":4,"video":0}'
+SPECULATIVE_CONFIG='{"method":"mtp","num_speculative_tokens":3}'
+EXTRA_ARGS="--kv-cache-dtype fp8 --calculate-kv-scales --attention-backend TRITON_ATTN"
+```
+
+Health:
+
+```text
+/v1/models: HTTP 200
+VRAM idle: ~42844 / 49140 MiB
+```
+
+Forced long-output benchmark, so `max_tokens` is actually reached:
+
+| prompt | max_tokens | concurrency | avg latency | aggregate output tok/s |
+|---|---:|---:|---:|---:|
+| small | 128 | 1 | 4.02s | 31.8 |
+| small | 128 | 2 | 4.41s | 56.6 |
+| small | 512 | 1 | 14.24s | 36.0 |
+| small | 512 | 2 | 14.75s | 68.6 |
+| medium ~2.2K prompt toks | 128 | 1 | 4.59s | 27.9 |
+| medium ~2.2K prompt toks | 128 | 2 | 4.96s | 50.2 |
+| medium ~2.2K prompt toks | 512 | 1 | 14.53s | 35.3 |
+| medium ~2.2K prompt toks | 512 | 2 | 14.02s | 72.4 |
+
+Short-answer benchmark, not directly comparable because model stopped early before `max_tokens`:
+
+| prompt | max_tokens | concurrency | avg latency | aggregate output tok/s | actual output tokens |
+|---|---:|---:|---:|---:|---:|
+| small | 128 | 1 | 3.72s | 32.0 | 119 |
+| small | 128 | 2 | 3.91s | 65.5 | 256 |
+| small | 512 | 1 | 3.43s | 34.7 | 119 |
+| small | 512 | 2 | 4.06s | 70.5 | 294 |
+| medium ~1.5K prompt toks | 128 | 1 | 2.96s | 28.4 | 84 |
+| medium ~1.5K prompt toks | 128 | 2 | 3.05s | 55.0 | 173 |
+| medium ~1.5K prompt toks | 512 | 1 | 3.00s | 28.0 | 84 |
+| medium ~1.5K prompt toks | 512 | 2 | 3.01s | 56.5 | 173 |
 
 ## Known caveats
 
