@@ -38,6 +38,33 @@ if [[ -e /root/.cache/flashinfer && ! -L /root/.cache/flashinfer ]]; then
 fi
 ln -sfn "${FLASHINFER_CACHE_DIR}" /root/.cache/flashinfer
 
+# Persist Vast.ai template/runtime environment for SSH debug helpers such as
+# vllm-restart. Keep this in the image so Vast template onstart can stay tiny.
+VLLM_ENV_FILE="${VLLM_ENV_FILE:-/workspace/vllm.env}"
+VLLM_ENV_KEYS=(
+  MODEL VLLM_MODEL SERVED_MODEL_NAME HOST PORT HF_HOME XDG_CACHE_HOME
+  VLLM_CACHE_ROOT TORCHINDUCTOR_CACHE_DIR FLASHINFER_CACHE_DIR DOWNLOAD_DIR
+  DTYPE QUANTIZATION TRUST_REMOTE_CODE TENSOR_PARALLEL_SIZE
+  PIPELINE_PARALLEL_SIZE AUTO_TENSOR_PARALLEL MAX_MODEL_LEN MAX_NUM_SEQS
+  MAX_NUM_BATCHED_TOKENS GPU_MEMORY_UTILIZATION ENABLE_PREFIX_CACHING
+  DISABLE_PREFIX_CACHING LANGUAGE_MODEL_ONLY LIMIT_MM_PER_PROMPT
+  MM_PROCESSOR_KWARGS ALLOWED_LOCAL_MEDIA_PATH REASONING_PARSER
+  ENABLE_REASONING ENABLE_AUTO_TOOL_CHOICE TOOL_CALL_PARSER VLLM_API_KEY
+  SPECULATIVE_CONFIG CHAT_TEMPLATE ENFORCE_EAGER EXTRA_ARGS
+  VLLM_NVFP4_GEMM_BACKEND VLLM_USE_FLASHINFER_MOE_FP4
+  VLLM_USE_FLASHINFER_SAMPLER HF_TOKEN HG_TOKEN HUGGING_FACE_HUB_TOKEN
+)
+mkdir -p "$(dirname "${VLLM_ENV_FILE}")"
+{
+  for key in "${VLLM_ENV_KEYS[@]}"; do
+    if [[ -n "${!key+x}" ]]; then
+      printf '%s=%q\n' "${key}" "${!key}"
+    fi
+  done
+} > "${VLLM_ENV_FILE}.tmp"
+mv "${VLLM_ENV_FILE}.tmp" "${VLLM_ENV_FILE}"
+chmod 600 "${VLLM_ENV_FILE}" || true
+
 # vLLM defaults tensor parallelism to 1. For Vast.ai multi-GPU rentals,
 # auto-use all visible GPUs unless TENSOR_PARALLEL_SIZE is explicitly set.
 AUTO_TENSOR_PARALLEL="${AUTO_TENSOR_PARALLEL:-true}"
