@@ -1,6 +1,6 @@
 # AGENTS.md
 
-- Vast.ai 操作先讀 `skills/vast-ai/SKILL.md` / 官方 docs / `vastai ... --help`，不要憑記憶猜 CLI、template、instance、volume、port、driver、CUDA、GPU RAM 參數。
+- Vast.ai 操作先讀 `.agents/skills/vast-ai/SKILL.md` / 官方 docs / `vastai ... --help`，不要憑記憶猜 CLI、template、instance、volume、port、driver、CUDA、GPU RAM 參數。
 - 改 Vast template 前先 `vastai search templates ... --raw` 讀現況；用現有 `extra_filters`/欄位當準，不要只丟局部 `--search_params`。`update template` 未帶欄位可能變 `null`，且會回新 `hash_id`。
 - template filter 輸入單位用 CLI 格式：`gpu_ram`=GB、`driver_version`=點號版本、`cuda_vers`=CUDA；不要把 raw/API 顯示的 MB、整數 driver、`cuda_max_good` 當輸入。
 - template `--env` 只放 Vast 支援的 `-e`/`-p`/`-h`；SSH/Jupyter runtype 會取代 image entrypoint，服務要由 `onstart` 啟動。
