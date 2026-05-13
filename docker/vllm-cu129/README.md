@@ -14,6 +14,10 @@ From repo root:
 
 ```bash
 docker build -t vllm-cu129:0.20.2 -f docker/vllm-cu129/Dockerfile docker/vllm-cu129
+
+docker buildx build --platform linux/amd64 \
+  -t ghcr.io/mics8128/vllm-cu129:0.20.2-cu129-nvfp4 \
+  -f docker/vllm-cu129/Dockerfile docker/vllm-cu129 --push
 ```
 
 Override wheel if release asset name changes:
@@ -167,6 +171,7 @@ HF_HOME=/data/hf
 | `XDG_CACHE_HOME` | Runtime cache root for libraries such as FlashInfer. Defaults to `/workspace/.cache` so JIT/autotune caches can survive vLLM restarts on the same Vast.ai instance. |
 | `VLLM_CACHE_ROOT` | vLLM cache root. Defaults to `/workspace/.cache/vllm`. |
 | `TORCHINDUCTOR_CACHE_DIR` | TorchInductor compile cache. Defaults to `/workspace/.cache/vllm/torch_compile_cache`. |
+| `FLASHINFER_CACHE_DIR` | FlashInfer kernel cache. Defaults to `/workspace/.cache/flashinfer`; entrypoint symlinks `/root/.cache/flashinfer` here because FlashInfer writes cached FP4 GEMM builds under root's cache directory. |
 | `HF_TOKEN` / `HG_TOKEN` / `HUGGING_FACE_HUB_TOKEN` | Hugging Face auth token. `HG_TOKEN` and `HUGGING_FACE_HUB_TOKEN` are copied to `HF_TOKEN` if `HF_TOKEN` is unset. |
 | `DTYPE` | `--dtype`, e.g. `auto`, `bfloat16`, `float16`. |
 | `QUANTIZATION` | `--quantization`, if needed. FP8 model repos often auto-detect. |

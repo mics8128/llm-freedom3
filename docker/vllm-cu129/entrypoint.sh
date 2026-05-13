@@ -20,7 +20,8 @@ HF_HOME="${HF_HOME:-/workspace/hf}"
 VLLM_CACHE_ROOT="${VLLM_CACHE_ROOT:-/workspace/.cache/vllm}"
 XDG_CACHE_HOME="${XDG_CACHE_HOME:-/workspace/.cache}"
 TORCHINDUCTOR_CACHE_DIR="${TORCHINDUCTOR_CACHE_DIR:-${VLLM_CACHE_ROOT}/torch_compile_cache}"
-export HF_HOME VLLM_CACHE_ROOT XDG_CACHE_HOME TORCHINDUCTOR_CACHE_DIR
+FLASHINFER_CACHE_DIR="${FLASHINFER_CACHE_DIR:-${XDG_CACHE_HOME}/flashinfer}"
+export HF_HOME VLLM_CACHE_ROOT XDG_CACHE_HOME TORCHINDUCTOR_CACHE_DIR FLASHINFER_CACHE_DIR
 
 # Accept common token aliases. Hugging Face tooling reads HF_TOKEN.
 if [[ -z "${HF_TOKEN:-}" && -n "${HG_TOKEN:-}" ]]; then
@@ -30,7 +31,12 @@ if [[ -z "${HF_TOKEN:-}" && -n "${HUGGING_FACE_HUB_TOKEN:-}" ]]; then
   export HF_TOKEN="${HUGGING_FACE_HUB_TOKEN}"
 fi
 
-mkdir -p "${HF_HOME}" "${VLLM_CACHE_ROOT}" "${XDG_CACHE_HOME}" "${TORCHINDUCTOR_CACHE_DIR}"
+mkdir -p "${HF_HOME}" "${VLLM_CACHE_ROOT}" "${XDG_CACHE_HOME}" "${TORCHINDUCTOR_CACHE_DIR}" "${FLASHINFER_CACHE_DIR}" /root/.cache
+if [[ -e /root/.cache/flashinfer && ! -L /root/.cache/flashinfer ]]; then
+  cp -a /root/.cache/flashinfer/. "${FLASHINFER_CACHE_DIR}/" 2>/dev/null || true
+  rm -rf /root/.cache/flashinfer
+fi
+ln -sfn "${FLASHINFER_CACHE_DIR}" /root/.cache/flashinfer
 
 # vLLM defaults tensor parallelism to 1. For Vast.ai multi-GPU rentals,
 # auto-use all visible GPUs unless TENSOR_PARALLEL_SIZE is explicitly set.

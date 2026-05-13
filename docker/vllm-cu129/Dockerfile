@@ -14,6 +14,7 @@ ENV PYTHONUNBUFFERED=1 \
     XDG_CACHE_HOME=/workspace/.cache \
     VLLM_CACHE_ROOT=/workspace/.cache/vllm \
     TORCHINDUCTOR_CACHE_DIR=/workspace/.cache/vllm/torch_compile_cache \
+    FLASHINFER_CACHE_DIR=/workspace/.cache/flashinfer \
     VLLM_USE_V1=1 \
     MODEL=Qwen/Qwen3.6-27B-FP8 \
     HOST=0.0.0.0 \
@@ -55,7 +56,8 @@ RUN chmod +x /usr/local/bin/vllm-entrypoint \
     /usr/local/bin/vllm-status \
     /usr/local/bin/vllm-set-param \
     /usr/local/bin/vllm-wait-ready \
-    && mkdir -p /workspace/hf /workspace/.cache/vllm/torch_compile_cache
+    && mkdir -p /workspace/hf /workspace/.cache/vllm/torch_compile_cache /workspace/.cache/flashinfer /root/.cache \
+    && ln -sfn /workspace/.cache/flashinfer /root/.cache/flashinfer
 
 EXPOSE 8000
 ENTRYPOINT ["tini", "--", "/usr/local/bin/vllm-entrypoint"]
